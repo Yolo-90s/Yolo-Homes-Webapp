@@ -1,0 +1,172 @@
+// Tolerant Firestore mappers — the live DB (written by a prior app) stores fields with
+// loose types: dates as Long/Timestamp/String, phones/colors as numbers, etc.
+
+import { Timestamp } from "firebase/firestore";
+
+/** Any temporal value → epoch millis. Handles number, Timestamp, Date, and date strings. */
+export function asMillis(v) {
+  if (v == null) return 0;
+  if (typeof v === "number") return v;
+  if (v instanceof Timestamp) return v.toMillis();
+  if (typeof v?.toMillis === "function") return v.toMillis();
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === "string") return parseDateString(v);
+  return 0;
+}
+
+function parseDateString(value) {
+  if (!value) return 0;
+  // yyyy-MM-dd, ISO, or yyyy-MM
+  const iso = Date.parse(value);
+  if (!isNaN(iso)) return iso;
+  const m = /^(\d{4})-(\d{2})$/.exec(value);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, 1).getTime();
+  return 0;
+}
+
+function str(v) {
+  return typeof v === "string" ? v : "";
+}
+/** Coerce any scalar (incl. numeric phones) to string. */
+function text(v) {
+  if (v == null) return "";
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : String(v);
+  return String(v);
+}
+function num(v) {
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+function bool(v, def = false) {
+  return typeof v === "boolean" ? v : def;
+}
+
+export function toFlat(snap) {
+  const d = snap.data() || {};
+  return {
+    id: snap.id,
+    flatNo: str(d.flatNo) || text(d.flatNumber),
+    block: text(d.block),
+    ownerName: text(d.ownerName),
+    ownerPhone: text(d.ownerPhone),
+    tenantName: text(d.tenantName),
+    tenantPhone: text(d.tenantPhone),
+    role: str(d.role) || "resident",
+    email: str(d.email),
+    get displayName() {
+      return this.block ? `${this.block}-${this.flatNo}` : this.flatNo;
+    },
+    get occupantName() {
+      return this.tenantName || this.ownerName;
+    },
+  };
+}
+
+export function toReceipt(snap) {
+  const d = snap.data() || {};
+  return {
+    id: snap.id,
+    flatId: str(d.flatId),
+    amount: num(d.amount),
+    period: str(d.period),
+    paymentMethod: str(d.paymentMethod),
+    paidDate: asMillis(d.paidDate),
+    capturedBy: str(d.capturedBy),
+    edited: bool(d.edited),
+  };
+}
+
+export function toReading(snap) {
+  const d = snap.data() || {};
+  return {
+    id: snap.id,
+    flatId: str(d.flatId),
+    previousReading: num(d.previousReading),
+    currentReading: num(d.currentReading),
+    usageLiters: num(d.usageLiters),
+    excessLiters: num(d.excessLiters),
+    amount: num(d.amount),
+    date: asMillis(d.date),
+    capturedBy: str(d.capturedBy),
+    edited: bool(d.edited),
+    hasImage: bool(d.hasImage),
+  };
+}
+
+export const DEFAULT_SETTINGS = {
+  apartmentName: "Sri Manjunatha Residency",
+  address: "",
+  currency: "₹",
+  freeLiters: 200,
+  ratePerExcessLiter: 0,
+  readingFrequency: "monthly",
+  decimalPrecision: 0,
+  roundingRule: "none",
+  sendBillMessage: false,
+  sendReminder: false,
+  unit: "Liters",
+  waterSource: "",
+};
+
+export function toSettings(snap) {
+  if (!snap || !snap.exists?.()) return { ...DEFAULT_SETTINGS };
+  const d = snap.data() || {};
+  return {
+    apartmentName: str(d.apartmentName) || DEFAULT_SETTINGS.apartmentName,
+    address: str(d.address),
+    currency: str(d.currency) || "₹",
+    freeLiters: d.freeLiters != null ? num(d.freeLiters) : DEFAULT_SETTINGS.freeLiters,
+    ratePerExcessLiter: num(d.ratePerExcessLiter),
+    readingFrequency: str(d.readingFrequency) || "monthly",
+    decimalPrecision: d.decimalPrecision != null ? num(d.decimalPrecision) : 0,
+    roundingRule: str(d.roundingRule) || "none",
+    sendBillMessage: bool(d.sendBillMessage),
+    sendReminder: bool(d.sendReminder),
+    unit: str(d.unit),
+    waterSource: str(d.waterSource),
+  };
+}
+
+/** Water bill: absolute exclude baseline (freeLiters). No monthly free allowance. */
+export function computeBill(settings, previous, current) {
+  const baseline = Number(settings?.freeLiters) || 0;
+  const rate = Number(settings?.ratePerExcessLiter) || 0;
+  const usage = Math.max(0, current - previous);
+  const billable = Math.max(0, Math.max(current, baseline) - Math.max(previous, baseline));
+  const raw = billable * rate;
+  let amount;
+  switch ((settings?.roundingRule || "").toLowerCase()) {
+    case "up":
+    case "ceil":
+      amount = Math.ceil(raw);
+      break;
+    case "down":
+    case "floor":
+      amount = Math.floor(raw);
+      break;
+    case "none":
+    case "off":
+    case "":
+      amount = raw;
+      break;
+    default:
+      amount = Math.round(raw);
+  }
+  return { usage, excess: billable, amount };
+}
+
+/** Lookup keyed by BOTH doc id and flatNo so any flatId form resolves. */
+export function flatLookup(flats) {
+  const map = {};
+  flats.forEach((f) => {
+    if (f.flatNo) map[f.flatNo] = f;
+  });
+  flats.forEach((f) => {
+    if (f.id) map[f.id] = f;
+  });
+  return map;
+}
