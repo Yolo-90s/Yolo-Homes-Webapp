@@ -35,6 +35,29 @@ export function useMasterFlats() {
   return { flats: [...data].sort((a, b) => a.flatNo.localeCompare(b.flatNo)), loading };
 }
 
+/**
+ * The complete building registry: the union of `masterFlats` (the maintained list, with
+ * owner/tenant/block details) and the operational `flats` collection (which older readings
+ * reference by auto-id). masterFlats wins on flatNo clash. Also returns `canonicalNo`, which
+ * maps a reading's stored flatId (usually a `flats` auto-id) back to a flatNo so it resolves
+ * to a flat even when the two collections are out of sync.
+ */
+export function useAllFlats() {
+  const { flats: ops, loading: l1 } = useFlats();
+  const { flats: master, loading: l2 } = useMasterFlats();
+
+  const byNo = {};
+  ops.forEach((f) => { if (f.flatNo) byNo[f.flatNo] = f; });
+  master.forEach((f) => { if (f.flatNo) byNo[f.flatNo] = f; });
+  const flats = Object.values(byNo).sort((a, b) => a.flatNo.localeCompare(b.flatNo));
+
+  const autoIdToNo = {};
+  ops.forEach((f) => { if (f.id && f.flatNo) autoIdToNo[f.id] = f.flatNo; });
+  const canonicalNo = (flatId) => autoIdToNo[flatId] || flatId;
+
+  return { flats, autoIdToNo, canonicalNo, loading: l1 || l2 };
+}
+
 export function useReceipts() {
   const { data, loading } = useCollection(COL.MAINTENANCE_RECEIPTS, toReceipt);
   return { receipts: [...data].sort((a, b) => b.paidDate - a.paidDate), loading };

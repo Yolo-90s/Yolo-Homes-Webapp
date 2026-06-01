@@ -12,6 +12,7 @@ import Water from "./pages/water/WaterPanel";
 import AddReading from "./pages/water/AddReading";
 import WaterHistory from "./pages/water/WaterHistory";
 import FlatConsumption from "./pages/water/FlatConsumption";
+import WaterReport from "./pages/water/WaterReport";
 import WaterBill from "./pages/water/WaterBill";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
@@ -41,6 +42,7 @@ function Shell() {
         <Route path="/water/add" element={<AddReading />} />
         <Route path="/water/history" element={<WaterHistory />} />
         <Route path="/water/consumption" element={<FlatConsumption />} />
+        <Route path="/water/report" element={<WaterReport />} />
         <Route path="/water/bill/:id" element={<WaterBill />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/profile" element={<Profile />} />

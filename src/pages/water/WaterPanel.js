@@ -51,7 +51,17 @@ export default function Water() {
     <div>
       <PageTitle
         title="Water"
-        actions={isAdmin && <AddButton onClick={() => navigate("/water/add")}>Add Reading</AddButton>}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/water/report")}
+              className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold hover:bg-white transition"
+            >
+              All Flats Report
+            </button>
+            {isAdmin && <AddButton onClick={() => navigate("/water/add")}>Add Reading</AddButton>}
+          </div>
+        }
       />
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
