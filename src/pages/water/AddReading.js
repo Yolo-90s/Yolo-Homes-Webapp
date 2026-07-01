@@ -58,8 +58,14 @@ export default function AddReading() {
       <PageTitle title="Add Reading" back />
       <div className="space-y-4">
         <label className="block">
-          <span className="text-xs font-medium text-muted mb-1 block">Select Flat</span>
-          <select className="input" value={flatId} onChange={(e) => onPickFlat(e.target.value)}>
+          <span className="text-xs font-medium text-muted mb-1 block">
+            Select Flat
+          </span>
+          <select
+            className="input"
+            value={flatId}
+            onChange={(e) => onPickFlat(e.target.value)}
+          >
             <option value="">Choose a flat…</option>
             {flats.map((f) => (
               <option key={f.id} value={f.id}>
@@ -72,16 +78,30 @@ export default function AddReading() {
         {flatId && (
           <>
             <label className="block">
-              <span className="text-xs font-medium text-muted mb-1 block">Previous Reading</span>
-              <input className="input bg-canvas" value={liters(previous)} readOnly />
-            </label>
-            <label className="block">
-              <span className="text-xs font-medium text-muted mb-1 block">Current Reading</span>
+              <span className="text-xs font-medium text-muted mb-1 block">
+                Previous Reading
+              </span>
+              <input
+                className="input"
+                inputMode="decimal"
+                value={previous}
+                onChange={(e) =>
+                  setPrevious(
+                    parseFloat(e.target.value.replace(/[^0-9.]/g, "")) || 0,
+                  )
+                }
+                placeholder="Enter previous meter reading"
+              />
+              <span className="text-xs font-medium text-muted mb-1 block">
+                Current Reading
+              </span>
               <input
                 className="input"
                 inputMode="decimal"
                 value={current}
-                onChange={(e) => setCurrent(e.target.value.replace(/[^0-9.]/g, ""))}
+                onChange={(e) =>
+                  setCurrent(e.target.value.replace(/[^0-9.]/g, ""))
+                }
                 placeholder="Enter meter reading"
               />
             </label>
@@ -89,16 +109,33 @@ export default function AddReading() {
             <div className="card p-4">
               <p className="section-title mb-1">Live Calculation</p>
               <DetailRow label="Usage" value={liters(bill.usage)} />
-              <DetailRow label="Exclude Limit (≤)" value={liters(settings.freeLiters)} />
+              <DetailRow
+                label="Exclude Limit (≤)"
+                value={liters(settings.freeLiters)}
+              />
               <DetailRow label="Billable Usage" value={liters(bill.excess)} />
-              <DetailRow label="Rate / Liter" value={currencyPrecise(settings.ratePerExcessLiter, settings.currency)} />
-              <DetailRow label="Amount" value={currency(bill.amount, settings.currency)} emphasize />
+              <DetailRow
+                label="Rate / Liter"
+                value={currencyPrecise(
+                  settings.ratePerExcessLiter,
+                  settings.currency,
+                )}
+              />
+              <DetailRow
+                label="Amount"
+                value={currency(bill.amount, settings.currency)}
+                emphasize
+              />
             </div>
           </>
         )}
 
         {error && <p className="text-danger text-sm">{error}</p>}
-        <button className="btn-primary flex items-center justify-center" disabled={saving || !valid} onClick={save}>
+        <button
+          className="btn-primary flex items-center justify-center"
+          disabled={saving || !valid}
+          onClick={save}
+        >
           {saving ? <Spinner /> : "Save Reading"}
         </button>
       </div>
