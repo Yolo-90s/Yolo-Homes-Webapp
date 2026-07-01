@@ -21,3 +21,12 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# Firebase Admin
+serviceAccountKey.json
+firebase-import/serviceAccountKey.json
+
+# Other secrets
+.env
+.env.local
