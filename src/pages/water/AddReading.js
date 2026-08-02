@@ -5,7 +5,7 @@ import { Spinner } from "../../components/ui";
 import { DetailRow } from "../../components/DetailRow";
 import { useFlats, useSettings } from "../../data/hooks";
 import { addReading, latestReadingForFlat } from "../../data/repo";
-import { computeBill } from "../../lib/firestore";
+import { computeBill, billingRateInfo } from "../../lib/firestore";
 import { liters, currency, currencyPrecise } from "../../lib/format";
 import { useAuth } from "../../context/AuthContext";
 
@@ -31,6 +31,7 @@ export default function AddReading() {
 
   const cur = parseFloat(current) || 0;
   const bill = computeBill(settings, previous, cur);
+  const rateInfo = billingRateInfo(settings);
   const valid = flatId && current !== "" && cur >= previous;
 
   async function save() {
@@ -110,14 +111,14 @@ export default function AddReading() {
               <p className="section-title mb-1">Live Calculation</p>
               <DetailRow label="Usage" value={liters(bill.usage)} />
               <DetailRow
-                label="Exclude Limit (≤)"
-                value={liters(settings.freeLiters)}
+                label={rateInfo.limitLabel}
+                value={liters(rateInfo.limit)}
               />
               <DetailRow label="Billable Usage" value={liters(bill.excess)} />
               <DetailRow
                 label="Rate / Liter"
                 value={currencyPrecise(
-                  settings.ratePerExcessLiter,
+                  rateInfo.rate,
                   settings.currency,
                 )}
               />

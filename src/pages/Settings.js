@@ -29,6 +29,8 @@ export default function Settings() {
         ...form,
         freeLiters: parseFloat(form.freeLiters) || 0,
         ratePerExcessLiter: parseFloat(form.ratePerExcessLiter) || 0,
+        freeLitersMonthly: parseFloat(form.freeLitersMonthly) || 0,
+        tieredRatePerLiter: parseFloat(form.tieredRatePerLiter) || 0,
       });
       navigate(-1);
     } catch (e) {
@@ -62,18 +64,46 @@ export default function Settings() {
         )}
 
         <SectionTitle>Water Billing</SectionTitle>
-        <Field label={`Rate per Liter (${form.currency || "₹"})`}>
-          <input className="input" disabled={!isAdmin} inputMode="decimal" value={form.ratePerExcessLiter}
-            onChange={(e) => set("ratePerExcessLiter", e.target.value.replace(/[^0-9.]/g, ""))} />
+        <Field label="Billing Method">
+          <select className="input" disabled={!isAdmin} value={form.billingMethod || "flat"}
+            onChange={(e) => set("billingMethod", e.target.value)}>
+            <option value="flat">Flat Rate (per liter)</option>
+            <option value="tiered">Tiered (Free Allowance + Excess Rate)</option>
+          </select>
         </Field>
-        <Field label="Free / Exclude Limit (L)">
-          <input className="input" disabled={!isAdmin} inputMode="decimal" value={form.freeLiters}
-            onChange={(e) => set("freeLiters", e.target.value.replace(/[^0-9.]/g, ""))} />
-        </Field>
-        <p className="text-xs text-muted">
-          Water meters ship showing ~100+ L. The first {form.freeLiters || 200} L are excluded — billing counts only
-          liters above this baseline, charged at the rate per liter.
-        </p>
+
+        {(form.billingMethod || "flat") === "flat" ? (
+          <>
+            <Field label={`Rate per Liter (${form.currency || "₹"})`}>
+              <input className="input" disabled={!isAdmin} inputMode="decimal" value={form.ratePerExcessLiter}
+                onChange={(e) => set("ratePerExcessLiter", e.target.value.replace(/[^0-9.]/g, ""))} />
+            </Field>
+            <Field label="Free / Exclude Limit (L)">
+              <input className="input" disabled={!isAdmin} inputMode="decimal" value={form.freeLiters}
+                onChange={(e) => set("freeLiters", e.target.value.replace(/[^0-9.]/g, ""))} />
+            </Field>
+            <p className="text-xs text-muted">
+              Water meters ship showing ~100+ L. The first {form.freeLiters || 200} L are excluded — billing counts only
+              liters above this baseline, charged at the rate per liter.
+            </p>
+          </>
+        ) : (
+          <>
+            <Field label="Free Allowance per Month (L)">
+              <input className="input" disabled={!isAdmin} inputMode="decimal" value={form.freeLitersMonthly}
+                onChange={(e) => set("freeLitersMonthly", e.target.value.replace(/[^0-9.]/g, ""))} />
+            </Field>
+            <Field label={`Rate per Excess Liter (${form.currency || "₹"})`}>
+              <input className="input" disabled={!isAdmin} inputMode="decimal" value={form.tieredRatePerLiter}
+                onChange={(e) => set("tieredRatePerLiter", e.target.value.replace(/[^0-9.]/g, ""))} />
+            </Field>
+            <p className="text-xs text-muted">
+              Usage up to {form.freeLitersMonthly || 10000} L per billing period is free. Only usage above that
+              is charged, at the rate per excess liter.
+            </p>
+          </>
+        )}
+
         <Field label="Currency Symbol">
           <input className="input" disabled={!isAdmin} value={form.currency} onChange={(e) => set("currency", e.target.value)} />
         </Field>

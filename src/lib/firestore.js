@@ -101,8 +101,11 @@ export const DEFAULT_SETTINGS = {
   apartmentName: "Sri Manjunatha Residency",
   address: "",
   currency: "₹",
+  billingMethod: "flat",
   freeLiters: 200,
   ratePerExcessLiter: 0,
+  freeLitersMonthly: 10000,
+  tieredRatePerLiter: 0.02,
   readingFrequency: "monthly",
   decimalPrecision: 0,
   roundingRule: "none",
@@ -119,8 +122,11 @@ export function toSettings(snap) {
     apartmentName: str(d.apartmentName) || DEFAULT_SETTINGS.apartmentName,
     address: str(d.address),
     currency: str(d.currency) || "₹",
+    billingMethod: d.billingMethod === "tiered" ? "tiered" : "flat",
     freeLiters: d.freeLiters != null ? num(d.freeLiters) : DEFAULT_SETTINGS.freeLiters,
     ratePerExcessLiter: num(d.ratePerExcessLiter),
+    freeLitersMonthly: d.freeLitersMonthly != null ? num(d.freeLitersMonthly) : DEFAULT_SETTINGS.freeLitersMonthly,
+    tieredRatePerLiter: d.tieredRatePerLiter != null ? num(d.tieredRatePerLiter) : DEFAULT_SETTINGS.tieredRatePerLiter,
     readingFrequency: str(d.readingFrequency) || "monthly",
     decimalPrecision: d.decimalPrecision != null ? num(d.decimalPrecision) : 0,
     roundingRule: str(d.roundingRule) || "none",
@@ -131,12 +137,28 @@ export function toSettings(snap) {
   };
 }
 
-/** Water bill: absolute exclude baseline (freeLiters). No monthly free allowance. */
+/**
+ * Two billing methods, chosen via settings.billingMethod:
+ * - "flat": absolute exclude baseline (freeLiters), every liter above it billed at ratePerExcessLiter.
+ *   No monthly free allowance — the baseline only matters on a flat's first-ever reading.
+ * - "tiered": a free allowance per billing period (freeLitersMonthly); only usage above it is
+ *   billed, at tieredRatePerLiter.
+ */
 export function computeBill(settings, previous, current) {
-  const baseline = Number(settings?.freeLiters) || 0;
-  const rate = Number(settings?.ratePerExcessLiter) || 0;
+  const tiered = settings?.billingMethod === "tiered";
   const usage = Math.max(0, current - previous);
-  const billable = Math.max(0, Math.max(current, baseline) - Math.max(previous, baseline));
+
+  let billable, rate;
+  if (tiered) {
+    const freeAllowance = Number(settings?.freeLitersMonthly) || 0;
+    rate = Number(settings?.tieredRatePerLiter) || 0;
+    billable = Math.max(0, usage - freeAllowance);
+  } else {
+    const baseline = Number(settings?.freeLiters) || 0;
+    rate = Number(settings?.ratePerExcessLiter) || 0;
+    billable = Math.max(0, Math.max(current, baseline) - Math.max(previous, baseline));
+  }
+
   const raw = billable * rate;
   let amount;
   switch ((settings?.roundingRule || "").toLowerCase()) {
@@ -157,6 +179,17 @@ export function computeBill(settings, previous, current) {
       amount = Math.round(raw);
   }
   return { usage, excess: billable, amount };
+}
+
+/** Resolves the rate/limit fields that actually apply under the active billing method. */
+export function billingRateInfo(settings) {
+  const tiered = settings?.billingMethod === "tiered";
+  return {
+    tiered,
+    rate: tiered ? Number(settings?.tieredRatePerLiter) || 0 : Number(settings?.ratePerExcessLiter) || 0,
+    limit: tiered ? Number(settings?.freeLitersMonthly) || 0 : Number(settings?.freeLiters) || 0,
+    limitLabel: tiered ? "Free Allowance (Monthly)" : "Exclude Limit (≤)",
+  };
 }
 
 /** Lookup keyed by BOTH doc id and flatNo so any flatId form resolves. */

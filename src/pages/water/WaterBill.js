@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import PageTitle from "../../components/PageTitle";
 import { useReadings, useFlats, useSettings } from "../../data/hooks";
-import { flatLookup } from "../../lib/firestore";
+import { flatLookup, billingRateInfo } from "../../lib/firestore";
 import { currency, currencyPrecise, liters, shortDate } from "../../lib/format";
 import { DetailRow, ReceiptDoc } from "../../components/DetailRow";
 
@@ -13,6 +13,7 @@ export default function WaterBill() {
   const byId = flatLookup(flats);
   const r = readings.find((x) => x.id === id);
   const flat = r ? byId[r.flatId] : null;
+  const rateInfo = billingRateInfo(settings);
 
   return (
     <div className="max-w-md mx-auto">
@@ -28,9 +29,9 @@ export default function WaterBill() {
             <DetailRow label="Previous Reading" value={liters(r.previousReading)} />
             <DetailRow label="Current Reading" value={liters(r.currentReading)} />
             <DetailRow label="Usage" value={liters(r.usageLiters)} />
-            <DetailRow label="Exclude Limit (≤)" value={liters(settings.freeLiters)} />
+            <DetailRow label={rateInfo.limitLabel} value={liters(rateInfo.limit)} />
             <DetailRow label="Billable Usage" value={liters(r.excessLiters)} />
-            <DetailRow label="Rate / Liter" value={currencyPrecise(settings.ratePerExcessLiter, settings.currency)} />
+            <DetailRow label="Rate / Liter" value={currencyPrecise(rateInfo.rate, settings.currency)} />
             <DetailRow label="Date" value={shortDate(r.date)} />
           </ReceiptDoc>
           <button className="btn-primary" onClick={() => window.print()}>

@@ -5,6 +5,7 @@ import PageTitle from "../../components/PageTitle";
 import { EmptyState } from "../../components/ui";
 import { useReadings, useAllFlats, useSettings } from "../../data/hooks";
 import { currency, currencyPrecise, liters, monthLabel, recentPeriods, periodKey, shortDate } from "../../lib/format";
+import { billingRateInfo } from "../../lib/firestore";
 import { useAuth } from "../../context/AuthContext";
 
 /** Plain integer liters (no " L" suffix) — the column header already says "(L)". */
@@ -20,7 +21,7 @@ const COLUMNS = [
   { key: "current", header: "Current (L)", get: (r) => (r.hasReading ? num(r.currentReading) : "—"), numeric: true },
   { key: "usage", header: "Usage (L)", get: (r) => (r.hasReading ? num(r.liters) : "—"), numeric: true },
   { key: "billable", header: "Billable (L)", get: (r) => (r.hasReading ? num(r.excess) : "—"), numeric: true },
-  { key: "rate", header: "Rate / L", get: (r, s) => currencyPrecise(s.ratePerExcessLiter, s.currency), numeric: true },
+  { key: "rate", header: "Rate / L", get: (r, s) => currencyPrecise(billingRateInfo(s).rate, s.currency), numeric: true },
   { key: "amount", header: "Amount", get: (r, s) => (r.hasReading ? currency(r.amount, s.currency) : "—"), numeric: true },
   { key: "date", header: "Date", get: (r) => (r.hasReading ? shortDate(r.date) : "—") },
   { key: "status", header: "Status", get: (r) => (!r.hasReading ? "No reading" : r.edited ? "Edited" : "Read") },
