@@ -89,7 +89,7 @@ export default function AddMaintenance() {
           <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>
-                {m.toUpperCase()}
+                {m}
               </option>
             ))}
           </select>
